@@ -21,6 +21,8 @@
 #include "display.h"
 #include "error.h"
 #include "test.h"
+#include "config.h"
+#include "cpuid.h"
 
 #include "test_funcs.h"
 #include "test_helper.h"
@@ -37,7 +39,7 @@ static int __attribute__((noipa)) pattern_fill_check(int my_cpu, testword_t offs
         display_test_pattern_name("own address");
     }
 
-    // Write each address with it's own address.
+    // Write each address with its own address.
     for (int i = 0; i < vm_map_size; i++) {
         testword_t *start = vm_map[i].start;
         testword_t *end   = vm_map[i].end;
@@ -60,9 +62,17 @@ static int __attribute__((noipa)) pattern_fill_check(int my_cpu, testword_t offs
             }
             test_addr[my_cpu] = (uintptr_t)p;
             if (!check) {
-                do {
-                    write_word(p, (testword_t)p + offset);
-                } while (p++ < pe); // test before increment in case pointer overflows
+                if (enable_nontemporal && cpuid_info.flags.sse2) {
+                    do {
+                        write_word_nt(p, (testword_t)p + offset);
+                    } while (p++ < pe); // test before increment in case pointer overflows
+                    __asm__ __volatile__ ("mfence");
+                }
+                else {
+                    do {
+                        write_word(p, (testword_t)p + offset);
+                    } while (p++ < pe); // test before increment in case pointer overflows
+                }
             }
             else {
                 do {
