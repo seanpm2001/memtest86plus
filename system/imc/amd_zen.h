@@ -6,20 +6,13 @@
 // Platform-specific code for AMD Zen CPUs
 //
 
-#include "cpuinfo.h"
-#include "memctrl.h"
-#include "msr.h"
-#include "pci.h"
-
-#include "imc.h"
-
 #define AMD_SMN_UMC_BAR             0x050000
 #define AMD_SMN_UMC_CHB_OFFSET      0x100000
 #define AMD_SMN_UMC_DRAM_CONFIG     AMD_SMN_UMC_BAR + 0x200
 #define AMD_SMN_UMC_DRAM_TIMINGS1   AMD_SMN_UMC_BAR + 0x204
 #define AMD_SMN_UMC_DRAM_TIMINGS2   AMD_SMN_UMC_BAR + 0x208
 
-void get_imc_config_amd_zen(void)
+static /*__attribute__((noinline)) */ void get_imc_config_amd_zen(void)
 {
     uint32_t smn_reg, offset;
     uint32_t reg_cha, reg_chb;

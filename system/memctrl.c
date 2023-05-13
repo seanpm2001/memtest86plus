@@ -9,10 +9,20 @@
 #include <stdbool.h>
 
 #include "config.h"
-#include "cpuinfo.h"
 
+#include "cpuinfo.h"
 #include "memctrl.h"
+#include "msr.h"
+#include "pci.h"
+#include "vmem.h"
+
 #include "imc/imc.h"
+#include "imc/amd_zen.h"
+#include "imc/intel_snb.h"
+#include "imc/intel_hsw.h"
+#include "imc/intel_skl.h"
+#include "imc/intel_icl.h"
+#include "imc/intel_adl.h"
 
 imc_info_t imc = {"UNDEF", 0, 0, 0, 0, 0, 0, 0, 0};
 
