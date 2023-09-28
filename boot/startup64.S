@@ -258,16 +258,28 @@ flush:	movw	$KERNEL_DS, %ax
 
 	finit
 
-#if 0
+#if 1
 	# Enable SSE.
 
 	movq	%cr0, %rax
 	andb	$0xfb, %al		# clear coprocessor emulation bit
 	orb	$0x02, %al		# set coprocessor monitoring bit
-	mov	%rax, %cr0
+	movq	%rax, %cr0
 	movq	%cr4, %rax
-	orw	$0x0600, %ax		# set OSFXSR and OSXMMEXCPT
+#	orb	$0x06, %ah		# set OSFXSR and OSXMMEXCPT
+#	movq	%rax, %cr4
+#	ldmxcsr	init_mxcsr(%rip)
+#	fxsave	fpustate(%rip)
+#	movq	%cr4, %rax
+	orl	$0x40600, %eax
 	movq	%rax, %cr4
+
+# FIXME make conditional
+	#0: jmp 0b
+	xor	%rcx, %rcx
+	xgetbv				# Load XCR0 register
+	orb	$0x07, %al		# Set AVX, SSE, X87 bits
+	xsetbv				# Save back to XCR0
 #endif
 
 	# Call the dynamic linker to fix up the addresses in the GOT.
@@ -630,6 +642,13 @@ startup_mutex:
 
 first_boot:
 	.long	1
+
+#init_mxcsr:
+#	.long	0x1F80
+#
+#	.align 16
+#fpustate:
+#	.fill	512, 1, 0
 
 	.previous
 

@@ -19,6 +19,9 @@
 #include "display.h"
 #include "error.h"
 #include "test.h"
+#include "config.h"
+
+#define WANT_SIMD
 
 #include "test_funcs.h"
 #include "test_helper.h"
@@ -29,20 +32,106 @@
 // Public Functions
 //------------------------------------------------------------------------------
 
-int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword_t pattern2)
+#if 0
+// XXX how to make this work without producing GCC error: 'SSE register return with SSE disabled' ?
+#pragma GCC target ("mmx", "no-sse", "no-sse2", "no-avx")
+static __attribute__((noinline)) void loops_simd64(testword_t *p, testword_t *pe, testword_t pattern1)
+{
+    register __m64 pattern __asm__("%mm0") = convert_testword_to_simd64(pattern1);
+    if (enable_nontemporal) {
+        do {
+            write64_simd_nt((__m64 *)p, pattern);
+            p += (sizeof(*p) < 8) ? 1 : 0;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    else {
+        do {
+            write64_simd((__m64 *)p, pattern);
+            p += (sizeof(*p) < 8) ? 1 : 0;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    __asm__ __volatile__ ("emms");
+    __sync_synchronize();
+}
+#endif
+
+#pragma GCC target ("mmx", "no-sse", "no-sse2", "no-avx")
+static __attribute__((noinline)) void loops_simd64(testword_t *p, testword_t *pe, testword_t pattern1)
+{
+    if (enable_nontemporal) {
+        do {
+            write64_simd_nt(p, pattern1);
+            p += (sizeof(*p) < 8) ? 1 : 0;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    else {
+        do {
+            write64_simd(p, pattern1);
+            p += (sizeof(*p) < 8) ? 1 : 0;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    __asm__ __volatile__ ("emms");
+    __sync_synchronize();
+}
+
+#ifdef __x86_64__
+#pragma GCC target ("sse2", "no-avx")
+#else
+#pragma GCC target ("sse", "no-sse2", "no-avx")
+#endif
+static __attribute__((noinline)) void loops_simd128(testword_t *p, testword_t *pe, testword_t pattern1)
+{
+    __m128 pattern = convert_testword_to_simd128(pattern1);
+    if (enable_nontemporal) {
+        do {
+            write128_simd_nt((__m128 *)p, pattern);
+            p += (sizeof(*p) < 8) ? 3 : 1;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    else {
+        do {
+            write128_simd((__m128 *)p, pattern);
+            p += (sizeof(*p) < 8) ? 3 : 1;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    __sync_synchronize();
+}
+
+#ifdef __x86_64__
+#pragma GCC target ("avx")
+static __attribute__((noinline)) void loops_simd256(testword_t *p, testword_t *pe, testword_t pattern1)
+{
+    if (enable_nontemporal) {
+        do {
+            write256_simd_nt(p, pattern1);
+            p += (sizeof(*p) < 8) ? 7 : 3;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    else {
+        do {
+            write256_simd(p, pattern1);
+            p += (sizeof(*p) < 8) ? 7 : 3;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    __sync_synchronize();
+}
+#endif
+
+int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword_t pattern2, int simd)
 {
     int ticks = 0;
 
     if (my_cpu == master_cpu) {
         display_test_pattern_value(pattern1);
     }
+    size_t chunk_align = simd == 1 ? 64/8 : (simd == 2 ? 128/8 : (simd == 3 ? 256/8 : sizeof(testword_t)));
 
     // Initialize memory with the initial pattern.
     for (int i = 0; i < vm_map_size; i++) {
         testword_t *start, *end;
-        calculate_chunk(&start, &end, my_cpu, i, sizeof(testword_t));
+        calculate_chunk(&start, &end, my_cpu, i, chunk_align);
         __asm__ volatile("nop");
-        if (end < start) SKIP_RANGE(1) // we need at least one word for this test
+        if ((end - start) < (simd == 0 ? 1 : (32/8 << simd) / sizeof(testword_t)) SKIP_RANGE(1) // we need enough words for this test
 
         testword_t *p  = start;
         testword_t *pe = start;
@@ -61,32 +150,47 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
                 continue;
             }
             test_addr[my_cpu] = (uintptr_t)p;
+            if (!simd) {
 #if HAND_OPTIMISED
 #ifdef __x86_64__
-            uint64_t length = pe - p + 1;
-            __asm__  __volatile__ ("\t"
-                "rep    \n\t"
-                "stosq  \n\t"
-                :
-                : "c" (length), "D" (p), "a" (pattern1)
-                :
-            );
-            p = pe;
+                uint64_t length = pe - p + 1;
+                __asm__  __volatile__ ("\t"
+                    "rep    \n\t"
+                    "stosq  \n\t"
+                    :
+                    : "c" (length), "D" (p), "a" (pattern1)
+                    :
+                );
+                p = pe;
 #else
-            uint32_t length = pe - p + 1;
-            __asm__  __volatile__ ("\t"
-                "rep    \n\t"
-                "stosl  \n\t"
-                :
-                : "c" (length), "D" (p), "a" (pattern1)
-                :
-            );
-            p = pe;
+                uint32_t length = pe - p + 1;
+                __asm__  __volatile__ ("\t"
+                    "rep    \n\t"
+                    "stosl  \n\t"
+                    :
+                    : "c" (length), "D" (p), "a" (pattern1)
+                    :
+                );
+                p = pe;
 #endif
 #else
-            do {
-                write_word(p, pattern1);
-            } while (p++ < pe); // test before increment in case pointer overflows
+                do {
+                    write_word(p, pattern1);
+                } while (p++ < pe); // test before increment in case pointer overflows
+#endif
+            }
+
+// SIMD code paths
+            else if (simd == 1) {
+                loops_simd64(p, pe, pattern1);
+            }
+            else if (simd == 2) {
+                loops_simd128(p, pe, pattern1);
+            }
+#ifdef __x86_64__
+            else if (simd == 3) {
+                loops_simd256(p, pe, pattern1);
+            }
 #endif
             do_tick(my_cpu);
             BAILOUT;
@@ -100,8 +204,8 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
 
         for (int j = 0; j < vm_map_size; j++) {
             testword_t *start, *end;
-            calculate_chunk(&start, &end, my_cpu, j, sizeof(testword_t));
-            if (end < start) SKIP_RANGE(1) // we need at least one word for this test
+            calculate_chunk(&start, &end, my_cpu, j, chunk_align);
+            if ((end - start) < (simd == 0 ? 1 : (32/8 << simd) / sizeof(testword_t)) SKIP_RANGE(1) // we need enough words for this test
 
             testword_t *p  = start;
             testword_t *pe = start;
@@ -136,8 +240,8 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
 
         for (int j = vm_map_size - 1; j >= 0; j--) {
             testword_t *start, *end;
-            calculate_chunk(&start, &end, my_cpu, j, sizeof(testword_t));
-            if (end < start) SKIP_RANGE(1) // we need at least one word for this test
+            calculate_chunk(&start, &end, my_cpu, j, chunk_align);
+            if ((end - start) < (simd == 0 ? 1 : (32/8 << simd) / sizeof(testword_t)) SKIP_RANGE(1) // we need enough words for this test
 
             testword_t *p  = end;
             testword_t *ps = end;

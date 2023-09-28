@@ -10,8 +10,8 @@ else
   GIT_AVAILABLE = true
 endif
 
-CFLAGS = -std=c11 -Wall -Wextra -Wshadow -m32 -march=i586 -fpic -fno-builtin \
-         -ffreestanding -fomit-frame-pointer -fno-stack-protector
+CFLAGS = -std=c11 -Wall -Wextra -Wshadow -m32 -march=i586 -mno-mmx -mno-sse -mno-sse2 \
+         -fpic -fno-builtin -ffreestanding -fomit-frame-pointer -fno-stack-protector
 
 ifeq ($(DEBUG), 1)
   CFLAGS+=-ggdb3 -DDEBUG_GDB

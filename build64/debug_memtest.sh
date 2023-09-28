@@ -271,6 +271,15 @@ Init() {
         QEMU_FLAGS+=" -numa dist,src=0,dst=1,val=21"
         QEMU_FLAGS+=" -numa dist,src=1,dst=0,val=21"
 
+    elif [ "x$MACHINE" = "x1S6CBroadwell" ]; then
+
+        QEMU_FLAGS+=" -m ${MEMSIZE}M -cpu Broadwell-v4"
+        QEMU_FLAGS+=" -smp 6,sockets=1,cores=6,maxcpus=6"
+
+        QEMU_FLAGS+=" -object memory-backend-ram,size=${MEMSIZE}M,id=m0,prealloc=on"
+
+        QEMU_FLAGS+=" -numa node,nodeid=0,memdev=m0,cpus=0-5"
+
     elif [ "x$MACHINE" = "x1S1CPhenom" ]; then
 
         QEMU_FLAGS+=" -m ${MEMSIZE}M -cpu phenom-v1"

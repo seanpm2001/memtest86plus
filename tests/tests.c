@@ -65,6 +65,11 @@ test_pattern_t test_list[NUM_TEST_PATTERNS] = {
     { true,  PAR,    1,   48,    0, "[Random number sequence]               "},
     { true,  PAR,    1,    6,    0, "[Modulo 20, random pattern]            "},
     { true,  ONE,    6,  240,    0, "[Bit fade test, 2 patterns]            "},
+    { true,  PAR,    1,   30,    0, "[MMX Mov inversions, random pattern]   "},
+    { true,  PAR,    1,   30,    0, "[SSE2 Mov inversions, random pattern]  "},
+#if TESTWORD_WIDTH > 32
+    { true,  PAR,    1,   30,    0, "[AVX Mov inversions, random pattern]   "},
+#endif
 };
 
 int ticks_per_pass[NUM_PASS_TYPES];
@@ -140,11 +145,11 @@ int run_test(int my_cpu, int test, int stage, int iterations)
         testword_t pattern2 = ~pattern1;
 
         BARRIER;
-        ticks += test_mov_inv_fixed(my_cpu, iterations, pattern1, pattern2);
+        ticks += test_mov_inv_fixed(my_cpu, iterations, pattern1, pattern2, 0);
         BAILOUT;
 
         BARRIER;
-        ticks += test_mov_inv_fixed(my_cpu, iterations, pattern2, pattern1);
+        ticks += test_mov_inv_fixed(my_cpu, iterations, pattern2, pattern1, 0);
         BAILOUT;
       } break;
 
@@ -159,11 +164,11 @@ int run_test(int my_cpu, int test, int stage, int iterations)
             testword_t pattern2 = ~pattern1;
 
             BARRIER;
-            ticks += test_mov_inv_fixed(my_cpu, iterations, pattern1, pattern2);
+            ticks += test_mov_inv_fixed(my_cpu, iterations, pattern1, pattern2, 0);
             BAILOUT;
 
             BARRIER;
-            ticks += test_mov_inv_fixed(my_cpu, iterations, pattern2, pattern1);
+            ticks += test_mov_inv_fixed(my_cpu, iterations, pattern2, pattern1, 0);
             BAILOUT;
 
             pattern1 >>= 1;
@@ -186,7 +191,7 @@ int run_test(int my_cpu, int test, int stage, int iterations)
             testword_t pattern2 = ~pattern1;
 
             BARRIER;
-            ticks += test_mov_inv_fixed(my_cpu, 2, pattern1, pattern2);
+            ticks += test_mov_inv_fixed(my_cpu, 2, pattern1, pattern2, 0);
             BAILOUT;
         }
         break;
@@ -251,6 +256,47 @@ int run_test(int my_cpu, int test, int stage, int iterations)
         ticks += test_bit_fade(my_cpu, stage, iterations);
         BAILOUT;
         break;
+
+        // SIMD moving inversions, fixed random pattern.
+      case 11:
+        if (cpuid_info.flags.mmx) {
+            goto simd;
+        }
+        BAILOUT;
+        break;
+      case 12:
+        if (cpuid_info.flags.sse) {
+            goto simd;
+        }
+        BAILOUT;
+        break;
+simd:
+        if (cpuid_info.flags.rdtsc) {
+            prsg_state = get_tsc();
+        } else {
+            prsg_state = 1 + pass_num;
+        }
+        prsg_state *= 0x12345678;
+
+        for (int i = 0; i < iterations; i++) {
+            prsg_state = prsg(prsg_state);
+
+            testword_t pattern1 = prsg_state;
+            testword_t pattern2 = ~pattern1;
+
+            BARRIER;
+            ticks += test_mov_inv_fixed(my_cpu, 2, pattern1, pattern2, test - 10);
+            BAILOUT;
+        }
+        break;
+#if TESTWORD_WIDTH > 32
+      case 13:
+        if (cpuid_info.flags.avx) {
+            goto simd;
+        }
+        BAILOUT;
+        break;
+#endif
     }
     return ticks;
 }

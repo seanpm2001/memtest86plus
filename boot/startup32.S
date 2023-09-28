@@ -186,6 +186,30 @@ init_idt_descr:
 
 	finit
 
+#if 1
+	# Enable SSE.
+
+	movl	%cr0, %eax
+	andb	$0xfb, %al		# clear coprocessor emulation bit
+	orb	$0x02, %al		# set coprocessor monitoring bit
+	movl	%eax, %cr0
+	movl	%cr4, %eax
+	orb	$0x06, %ah		# set OSFXSR and OSXMMEXCPT
+	movl	%eax, %cr4
+#	ldmxcsr	init_mxcsr(%rip)
+#	fxsave	fpustate(%rip)
+#	movl	%cr4, %eax
+#	orl	$0x40600, %eax
+#	movl	%eax, %cr4
+#
+# FIXME make conditional
+#	#0: jmp 0b
+#	xor	%ecx, %ecx
+#	xgetbv				# Load XCR0 register
+#	orb	$0x07, %al		# Set AVX, SSE, X87 bits
+#	xsetbv				# Save back to XCR0
+ #endif
+
 	# Call the dynamic linker to fix up the addresses in the GOT.
 
 	call	reloc
@@ -797,6 +821,13 @@ first_boot:
 
 use_long_mode:
 	.long	0
+
+#init_mxcsr:
+#	.long	0x1F80
+#
+#	.align 16
+#fpustate:
+#	.fill	512, 1, 0
 
 	.previous
 
