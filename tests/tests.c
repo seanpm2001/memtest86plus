@@ -66,9 +66,11 @@ test_pattern_t test_list[NUM_TEST_PATTERNS] = {
     { true,  PAR,    1,    6,    0, "[Modulo 20, random pattern]            "},
     { true,  ONE,    6,  240,    0, "[Bit fade test, 2 patterns]            "},
     { true,  PAR,    1,   30,    0, "[MMX Mov inversions, random pattern]   "},
-    { true,  PAR,    1,   30,    0, "[SSE2 Mov inversions, random pattern]  "},
 #if TESTWORD_WIDTH > 32
+    { true,  PAR,    1,   30,    0, "[SSE2 Mov inversions, random pattern]  "},
     { true,  PAR,    1,   30,    0, "[AVX Mov inversions, random pattern]   "},
+#else
+    { true,  PAR,    1,   30,    0, "[SSE Mov inversions, random pattern]   "},
 #endif
 };
 

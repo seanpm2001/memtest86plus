@@ -15,8 +15,7 @@
 #include <stdint.h>
 
 /**
- * Reads and returns the value stored in the 32-bit memory location pointed
- * to by ptr.
+ * Reads and returns the value stored in the 32-bit memory location pointed to by ptr.
  */
 static inline uint32_t read32(const volatile uint32_t *ptr)
 {
@@ -142,6 +141,28 @@ static inline void write128_simd_nt(const volatile __m128 *ptr, __m128 val)
           "x" (val)
         : "memory"
     );
+}
+
+/**
+ * Reads and returns the value stored in the 128-bit memory location pointed to by ptr.
+ */
+#pragma GCC target ("sse")
+static inline __m128 read128_simd(const volatile __m128 *ptr)
+{
+    __m128 val;
+    __asm__ __volatile__(
+        "movaps %1, %0"
+        : "=x" (val)
+        : "m" (*ptr)
+        : "memory"
+    );
+    return val;
+}
+
+#pragma GCC target ("sse")
+static inline int compare128_simd(__m128 val1, __m128 val2)
+{
+    return _mm_movemask_ps(_mm_cmpeq_ps(val1, val2));
 }
 
 #endif
