@@ -165,6 +165,64 @@ static inline int compare128_simd(__m128 val1, __m128 val2)
     return _mm_movemask_ps(_mm_cmpeq_ps(val1, val2));
 }
 
+/**
+ * Writes val to the 256-bit memory location pointed to by ptr, using AVX register as source operand.
+ */
+#pragma GCC target ("avx")
+static inline void write256_simd(const volatile __m256 *ptr, __m256 val)
+{
+    __asm__ __volatile__(
+        "vmovdqa %1, %0"
+        :
+        : "m" (*ptr),
+          "x" (val)
+        : "memory"
+    );
+}
+
+/**
+ * Writes val to the 256-bit memory location pointed to by ptr, using AVX register as source operand, using non-temporal hint.
+ */
+#pragma GCC target ("avx")
+static inline void write256_simd_nt(const volatile __m256 *ptr, __m256 val)
+{
+    __asm__ __volatile__(
+        "vmovntdq %1, %0"
+        :
+        : "m" (*ptr),
+          "x" (val)
+        : "memory"
+    );
+}
+
+/**
+ * Reads and returns the value stored in the 128-bit memory location pointed to by ptr.
+ */
+#pragma GCC target ("avx")
+static inline __m256 read256_simd(const volatile __m256 *ptr)
+{
+    __m256 val;
+    __asm__ __volatile__(
+        "vmovdqa %1, %0"
+        : "=x" (val)
+        : "m" (*ptr)
+        : "memory"
+    );
+    return val;
+}
+
+#pragma GCC target ("avx")
+static inline __m256 convert_testword_to_simd256(uint32_t val)
+{
+    return (__m256)_mm256_set1_epi32(val);
+}
+
+#pragma GCC target ("avx")
+static inline int compare256_simd(__m256 val1, __m256 val2)
+{
+    return _mm256_movemask_pd(_mm256_cmp_pd((__m256d)val1, (__m256d)val2, 0));
+}
+
 #endif
 
 /**

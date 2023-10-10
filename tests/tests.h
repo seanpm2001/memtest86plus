@@ -14,11 +14,11 @@
 
 #include "config.h"
 
-#if TESTWORD_WIDTH > 32
+//#if TESTWORD_WIDTH > 32
 #define NUM_TEST_PATTERNS   14
-#else
+/*#else
 #define NUM_TEST_PATTERNS   13
-#endif
+#endif*/
 
 typedef struct {
     bool            enabled;

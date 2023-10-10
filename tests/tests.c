@@ -68,10 +68,10 @@ test_pattern_t test_list[NUM_TEST_PATTERNS] = {
     { true,  PAR,    1,   30,    0, "[MMX Mov inversions, random pattern]   "},
 #if TESTWORD_WIDTH > 32
     { true,  PAR,    1,   30,    0, "[SSE2 Mov inversions, random pattern]  "},
-    { true,  PAR,    1,   30,    0, "[AVX Mov inversions, random pattern]   "},
 #else
     { true,  PAR,    1,   30,    0, "[SSE Mov inversions, random pattern]   "},
 #endif
+    { true,  PAR,    1,   30,    0, "[AVX Mov inversions, random pattern]   "},
 };
 
 int ticks_per_pass[NUM_PASS_TYPES];

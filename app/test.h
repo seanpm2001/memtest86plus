@@ -70,6 +70,10 @@ extern spinlock_t *error_mutex;
  * The string representation of TESTWORDS_DIGITS
  */
 #define TESTWORD_DIGITS_STR "16"
+/**
+ * The register prefix for full-sized registers.
+ */
+#define REG_PREFIX  "r"
 #else
 /**
  * The word width (in bits) used for memory testing.
@@ -83,6 +87,10 @@ extern spinlock_t *error_mutex;
  * The string representation of TESTWORDS_DIGITS
  */
 #define TESTWORD_DIGITS_STR "8"
+/**
+ * The register prefix for full-sized registers.
+ */
+#define REG_PREFIX  "e"
 #endif
 
 /**

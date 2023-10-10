@@ -152,7 +152,7 @@ static __attribute__((noinline)) testword_t * read2_loops_simd128(testword_t *p,
 }
 #undef COMPARE_TARGET
 
-#ifdef __x86_64__
+#define COMPARE_TARGET 0xF
 #pragma GCC target ("avx")
 static __attribute__((noinline)) testword_t * write_loops_simd256(testword_t *p, testword_t *pe, testword_t pattern1)
 {
@@ -173,7 +173,6 @@ static __attribute__((noinline)) testword_t * write_loops_simd256(testword_t *p,
     return p;
 }
 
-#define COMPARE_TARGET 0xF
 #pragma GCC target ("avx")
 static __attribute__((noinline)) testword_t * read1_loops_simd256(testword_t *p, testword_t *pe, testword_t pattern1, testword_t pattern2)
 {
@@ -212,7 +211,6 @@ static __attribute__((noinline)) testword_t * read2_loops_simd256(testword_t *p,
     return p;
 }
 #undef COMPARE_TARGET
-#endif
 
 int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword_t pattern2, int simd)
 {
@@ -284,11 +282,9 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
             else if (simd == 2) {
                 p = write_loops_simd128(p, pe, pattern1);
             }
-#ifdef __x86_64__
             else if (simd == 3) {
                 p = write_loops_simd256(p, pe, pattern1);
             }
-#endif
             do_tick(my_cpu);
             BAILOUT;
         } while (!at_end && ++pe); // advance pe to next start point
@@ -335,11 +331,9 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
                 else if (simd == 2) {
                     p = read1_loops_simd128(p, pe, pattern1, pattern2);
                 }
-#ifdef __x86_64__
                 else if (simd == 3) {
                     p = read1_loops_simd256(p, pe, pattern1, pattern2);
                 }
-#endif
                 do_tick(my_cpu);
                 BAILOUT;
             } while (!at_end && ++pe); // advance pe to next start point
@@ -383,11 +377,9 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
                 else if (simd == 2) {
                     p = read2_loops_simd128((testword_t *)((uintptr_t)p & ~(uintptr_t)0xF), ps, pattern1, pattern2);
                 }
-#ifdef __x86_64__
                 else if (simd == 3) {
                     p = read2_loops_simd256((testword_t *)((uintptr_t)p & ~(uintptr_t)0x1F), ps, pattern1, pattern2);
                 }
-#endif
                 do_tick(my_cpu);
                 BAILOUT;
             } while (!at_start && --ps); // advance ps to next start point
