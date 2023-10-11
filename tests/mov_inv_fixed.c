@@ -32,6 +32,8 @@
 // Public Functions
 //------------------------------------------------------------------------------
 
+// ==================== vvvvv MMX vvvvv ====================
+
 #if 0
 // XXX how to make this work without producing GCC error: 'SSE register return with SSE disabled' ?
 #pragma GCC target ("mmx", "no-sse", "no-sse2", "no-avx")
@@ -57,17 +59,17 @@ static __attribute__((noinline)) testword_t * write_loops_simd64(testword_t *p, 
 #endif
 
 #pragma GCC target ("mmx", "no-sse", "no-sse2", "no-avx")
-static __attribute__((noinline)) testword_t * write_loops_simd64(testword_t *p, testword_t *pe, testword_t pattern1)
+static __attribute__((noinline)) testword_t * write_loops_simd64_mmx(testword_t *p, testword_t *pe, testword_t pattern1)
 {
     if (enable_nontemporal) {
         do {
-            write64_simd_nt(p, pattern1);
+            write64_mmx_nt(p, pattern1);
             p += (sizeof(*p) < 8) ? 1 : 0;
         } while (p++ < pe); // test before increment in case pointer overflows
     }
     else {
         do {
-            write64_simd(p, pattern1);
+            write64_mmx(p, pattern1);
             p += (sizeof(*p) < 8) ? 1 : 0;
         } while (p++ < pe); // test before increment in case pointer overflows
     }
@@ -79,23 +81,24 @@ static __attribute__((noinline)) testword_t * write_loops_simd64(testword_t *p, 
 // ? TODO ? read1_loops_simd64
 // ? TODO ? read2_loops_simd64
 
-#ifdef __x86_64__
-#pragma GCC target ("sse2", "no-avx")
-#else
+// ==================== ^^^^^ MMX ^^^^^ ====================
+
+
+// ==================== vvvvv SSE vvvvv ====================
+
 #pragma GCC target ("sse", "no-sse2", "no-avx")
-#endif
-static __attribute__((noinline)) testword_t * write_loops_simd128(testword_t *p, testword_t *pe, testword_t pattern1)
+static __attribute__((noinline)) testword_t * write_loops_simd128_sse(testword_t *p, testword_t *pe, testword_t pattern1)
 {
-    __m128 mdpattern1 = convert_testword_to_simd128(pattern1);
+    __m128 mdpattern1 = convert_testword_to_simd128_sse(pattern1);
     if (enable_nontemporal) {
         do {
-            write128_simd_nt((__m128 *)p, mdpattern1);
+            write128_sse_nt((__m128 *)p, mdpattern1);
             p += (sizeof(*p) < 8) ? 3 : 1;
         } while (p++ < pe); // test before increment in case pointer overflows
     }
     else {
         do {
-            write128_simd((__m128 *)p, mdpattern1);
+            write128_sse((__m128 *)p, mdpattern1);
             p += (sizeof(*p) < 8) ? 3 : 1;
         } while (p++ < pe); // test before increment in case pointer overflows
     }
@@ -103,21 +106,17 @@ static __attribute__((noinline)) testword_t * write_loops_simd128(testword_t *p,
     return p;
 }
 
-#ifdef __x86_64__
-#pragma GCC target ("sse2", "no-avx")
-#define COMPARE_TARGET 0x3
-#else
-#pragma GCC target ("sse", "no-sse2", "no-avx")
 #define COMPARE_TARGET 0xF
-#endif
-static __attribute__((noinline)) testword_t * read1_loops_simd128(testword_t *p, testword_t *pe, testword_t pattern1, testword_t pattern2)
+
+#pragma GCC target ("sse", "no-sse2", "no-avx")
+static __attribute__((noinline)) testword_t * read1_loops_simd128_sse(testword_t *p, testword_t *pe, testword_t pattern1, testword_t pattern2)
 {
-    __m128 mdpattern1 = convert_testword_to_simd128(pattern1);
-    __m128 mdpattern2 = convert_testword_to_simd128(pattern2);
+    __m128 mdpattern1 = convert_testword_to_simd128_sse(pattern1);
+    __m128 mdpattern2 = convert_testword_to_simd128_sse(pattern2);
     do {
-        __m128 actual = read128_simd((__m128 *)p);
-        int compar_result = compare128_simd(mdpattern1, actual);
-        write128_simd((__m128 *)p, mdpattern2);
+        __m128 actual = read128_sse((__m128 *)p);
+        int compar_result = compare128_sse(mdpattern1, actual);
+        write128_sse((__m128 *)p, mdpattern2);
         if (unlikely(compar_result != COMPARE_TARGET)) {
             __m128 good = mdpattern1;
             __m128 bad = actual;
@@ -128,19 +127,15 @@ static __attribute__((noinline)) testword_t * read1_loops_simd128(testword_t *p,
     return p;
 }
 
-#ifdef __x86_64__
-#pragma GCC target ("sse2", "no-avx")
-#else
 #pragma GCC target ("sse", "no-sse2", "no-avx")
-#endif
-static __attribute__((noinline)) testword_t * read2_loops_simd128(testword_t *p, testword_t *ps, testword_t pattern1, testword_t pattern2)
+static __attribute__((noinline)) testword_t * read2_loops_simd128_sse(testword_t *p, testword_t *ps, testword_t pattern1, testword_t pattern2)
 {
-    __m128 mdpattern1 = convert_testword_to_simd128(pattern1);
-    __m128 mdpattern2 = convert_testword_to_simd128(pattern2);
+    __m128 mdpattern1 = convert_testword_to_simd128_sse(pattern1);
+    __m128 mdpattern2 = convert_testword_to_simd128_sse(pattern2);
     do {
-        __m128 actual = read128_simd((__m128 *)p);
-        int compar_result = compare128_simd(mdpattern2, actual);
-        write128_simd((__m128 *)p, mdpattern1);
+        __m128 actual = read128_sse((__m128 *)p);
+        int compar_result = compare128_sse(mdpattern2, actual);
+        write128_sse((__m128 *)p, mdpattern1);
         if (unlikely(compar_result != COMPARE_TARGET)) {
             __m128 good = mdpattern2;
             __m128 bad = actual;
@@ -150,22 +145,96 @@ static __attribute__((noinline)) testword_t * read2_loops_simd128(testword_t *p,
     } while (p-- > ps); // test before decrement in case pointer overflows
     return p;
 }
+
 #undef COMPARE_TARGET
 
-#define COMPARE_TARGET 0xF
-#pragma GCC target ("avx")
-static __attribute__((noinline)) testword_t * write_loops_simd256(testword_t *p, testword_t *pe, testword_t pattern1)
+// ==================== ^^^^^ SSE ^^^^^ ====================
+
+
+// ==================== vvvvv SSE2 vvvvv ====================
+
+#pragma GCC target ("sse2", "no-avx")
+static __attribute__((noinline)) testword_t * write_loops_simd128_sse2(testword_t *p, testword_t *pe, testword_t pattern1)
 {
-    __m256 mdpattern1 = convert_testword_to_simd256(pattern1);
+    __m128 mdpattern1 = convert_testword_to_simd128_sse2(pattern1);
     if (enable_nontemporal) {
         do {
-            write256_simd_nt((__m256 *)p, mdpattern1);
+            write128_sse2_nt((__m128 *)p, mdpattern1);
+            p += (sizeof(*p) < 8) ? 3 : 1;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    else {
+        do {
+            write128_sse2((__m128 *)p, mdpattern1);
+            p += (sizeof(*p) < 8) ? 3 : 1;
+        } while (p++ < pe); // test before increment in case pointer overflows
+    }
+    __sync_synchronize();
+    return p;
+}
+
+#define COMPARE_TARGET 0x3
+
+#pragma GCC target ("sse2", "no-avx")
+static __attribute__((noinline)) testword_t * read1_loops_simd128_sse2(testword_t *p, testword_t *pe, testword_t pattern1, testword_t pattern2)
+{
+    __m128 mdpattern1 = convert_testword_to_simd128_sse2(pattern1);
+    __m128 mdpattern2 = convert_testword_to_simd128_sse2(pattern2);
+    do {
+        __m128 actual = read128_sse2((__m128 *)p);
+        int compar_result = compare128_sse2(mdpattern1, actual);
+        write128_sse2((__m128 *)p, mdpattern2);
+        if (unlikely(compar_result != COMPARE_TARGET)) {
+            __m128 good = mdpattern1;
+            __m128 bad = actual;
+            data_error_wide(p, (testword_t *)&good, (testword_t *)&bad, 128 / (8 * sizeof(*p)), true);
+        }
+        p += (sizeof(*p) < 8) ? 3 : 1;
+    } while (p++ < pe); // test before increment in case pointer overflows
+    return p;
+}
+
+#pragma GCC target ("sse2", "no-avx")
+static __attribute__((noinline)) testword_t * read2_loops_simd128_sse2(testword_t *p, testword_t *ps, testword_t pattern1, testword_t pattern2)
+{
+    __m128 mdpattern1 = convert_testword_to_simd128_sse2(pattern1);
+    __m128 mdpattern2 = convert_testword_to_simd128_sse2(pattern2);
+    do {
+        __m128 actual = read128_sse2((__m128 *)p);
+        int compar_result = compare128_sse2(mdpattern2, actual);
+        write128_sse2((__m128 *)p, mdpattern1);
+        if (unlikely(compar_result != COMPARE_TARGET)) {
+            __m128 good = mdpattern2;
+            __m128 bad = actual;
+            data_error_wide(p, (testword_t *)&good, (testword_t *)&bad, 128 / (8 * sizeof(*p)), true);
+        }
+        p -= (sizeof(*p) < 8) ? 3 : 1;
+    } while (p-- > ps); // test before decrement in case pointer overflows
+    return p;
+}
+
+#undef COMPARE_TARGET
+
+// ==================== ^^^^^ SSE2 ^^^^^ ====================
+
+
+// ==================== vvvvv AVX vvvvv ====================
+
+#define COMPARE_TARGET 0xF
+
+#pragma GCC target ("avx")
+static __attribute__((noinline)) testword_t * write_loops_simd256_avx(testword_t *p, testword_t *pe, testword_t pattern1)
+{
+    __m256 mdpattern1 = convert_testword_to_simd256_avx(pattern1);
+    if (enable_nontemporal) {
+        do {
+            write256_avx_nt((__m256 *)p, mdpattern1);
             p += (sizeof(*p) < 8) ? 7 : 3;
         } while (p++ < pe); // test before increment in case pointer overflows
     }
     else {
         do {
-            write256_simd((__m256 *)p, mdpattern1);
+            write256_avx((__m256 *)p, mdpattern1);
             p += (sizeof(*p) < 8) ? 7 : 3;
         } while (p++ < pe); // test before increment in case pointer overflows
     }
@@ -174,14 +243,14 @@ static __attribute__((noinline)) testword_t * write_loops_simd256(testword_t *p,
 }
 
 #pragma GCC target ("avx")
-static __attribute__((noinline)) testword_t * read1_loops_simd256(testword_t *p, testword_t *pe, testword_t pattern1, testword_t pattern2)
+static __attribute__((noinline)) testword_t * read1_loops_simd256_avx(testword_t *p, testword_t *pe, testword_t pattern1, testword_t pattern2)
 {
-    __m256 mdpattern1 = convert_testword_to_simd256(pattern1);
-    __m256 mdpattern2 = convert_testword_to_simd256(pattern2);
+    __m256 mdpattern1 = convert_testword_to_simd256_avx(pattern1);
+    __m256 mdpattern2 = convert_testword_to_simd256_avx(pattern2);
     do {
-        __m256 actual = read256_simd((__m256 *)p);
-        int compar_result = compare256_simd(mdpattern1, actual);
-        write256_simd((__m256 *)p, mdpattern2);
+        __m256 actual = read256_avx((__m256 *)p);
+        int compar_result = compare256_avx(mdpattern1, actual);
+        write256_avx((__m256 *)p, mdpattern2);
         if (unlikely(compar_result != COMPARE_TARGET)) {
             __m256 good = mdpattern1;
             __m256 bad = actual;
@@ -193,14 +262,14 @@ static __attribute__((noinline)) testword_t * read1_loops_simd256(testword_t *p,
 }
 
 #pragma GCC target ("avx")
-static __attribute__((noinline)) testword_t * read2_loops_simd256(testword_t *p, testword_t *ps, testword_t pattern1, testword_t pattern2)
+static __attribute__((noinline)) testword_t * read2_loops_simd256_avx(testword_t *p, testword_t *ps, testword_t pattern1, testword_t pattern2)
 {
-    __m256 mdpattern1 = convert_testword_to_simd256(pattern1);
-    __m256 mdpattern2 = convert_testword_to_simd256(pattern2);
+    __m256 mdpattern1 = convert_testword_to_simd256_avx(pattern1);
+    __m256 mdpattern2 = convert_testword_to_simd256_avx(pattern2);
     do {
-        __m256 actual = read256_simd((__m256 *)p);
-        int compar_result = compare256_simd(mdpattern2, actual);
-        write256_simd((__m256 *)p, mdpattern1);
+        __m256 actual = read256_avx((__m256 *)p);
+        int compar_result = compare256_avx(mdpattern2, actual);
+        write256_avx((__m256 *)p, mdpattern1);
         if (unlikely(compar_result != COMPARE_TARGET)) {
             __m256 good = mdpattern2;
             __m256 bad = actual;
@@ -210,7 +279,10 @@ static __attribute__((noinline)) testword_t * read2_loops_simd256(testword_t *p,
     } while (p-- > ps); // test before decrement in case pointer overflows
     return p;
 }
+
 #undef COMPARE_TARGET
+
+// ==================== ^^^^^ AVX ^^^^^ ====================
 
 int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword_t pattern2, int simd)
 {
@@ -219,7 +291,7 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
     if (my_cpu == master_cpu) {
         display_test_pattern_value(pattern1);
     }
-    size_t chunk_align = simd == 1 ? 64/8 : (simd == 2 ? 128/8 : (simd == 3 ? 256/8 : sizeof(testword_t)));
+    size_t chunk_align = simd == 1 ? 64/8 : ((simd == 2 || simd == 3) ? 128/8 : (simd == 4 ? 256/8 : sizeof(testword_t)));
 
     // Initialize memory with the initial pattern.
     for (int i = 0; i < vm_map_size; i++) {
@@ -277,13 +349,16 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
             }
 // SIMD code paths
             else if (simd == 1) {
-                p = write_loops_simd64(p, pe, pattern1);
+                p = write_loops_simd64_mmx(p, pe, pattern1);
             }
             else if (simd == 2) {
-                p = write_loops_simd128(p, pe, pattern1);
+                p = write_loops_simd128_sse(p, pe, pattern1);
             }
             else if (simd == 3) {
-                p = write_loops_simd256(p, pe, pattern1);
+                p = write_loops_simd128_sse2(p, pe, pattern1);
+            }
+            else if (simd == 4) {
+                p = write_loops_simd256_avx(p, pe, pattern1);
             }
             do_tick(my_cpu);
             BAILOUT;
@@ -329,10 +404,13 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
                 }
 // SIMD code paths
                 else if (simd == 2) {
-                    p = read1_loops_simd128(p, pe, pattern1, pattern2);
+                    p = read1_loops_simd128_sse(p, pe, pattern1, pattern2);
                 }
                 else if (simd == 3) {
-                    p = read1_loops_simd256(p, pe, pattern1, pattern2);
+                    p = read1_loops_simd128_sse2(p, pe, pattern1, pattern2);
+                }
+                else if (simd == 4) {
+                    p = read1_loops_simd256_avx(p, pe, pattern1, pattern2);
                 }
                 do_tick(my_cpu);
                 BAILOUT;
@@ -375,10 +453,13 @@ int test_mov_inv_fixed(int my_cpu, int iterations, testword_t pattern1, testword
                 }
 // SIMD code paths
                 else if (simd == 2) {
-                    p = read2_loops_simd128((testword_t *)((uintptr_t)p & ~(uintptr_t)0xF), ps, pattern1, pattern2);
+                    p = read2_loops_simd128_sse((testword_t *)((uintptr_t)p & ~(uintptr_t)0xF), ps, pattern1, pattern2);
                 }
                 else if (simd == 3) {
-                    p = read2_loops_simd256((testword_t *)((uintptr_t)p & ~(uintptr_t)0x1F), ps, pattern1, pattern2);
+                    p = read2_loops_simd128_sse2((testword_t *)((uintptr_t)p & ~(uintptr_t)0xF), ps, pattern1, pattern2);
+                }
+                else if (simd == 4) {
+                    p = read2_loops_simd256_avx((testword_t *)((uintptr_t)p & ~(uintptr_t)0x1F), ps, pattern1, pattern2);
                 }
                 do_tick(my_cpu);
                 BAILOUT;

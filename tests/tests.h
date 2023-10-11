@@ -15,7 +15,7 @@
 #include "config.h"
 
 //#if TESTWORD_WIDTH > 32
-#define NUM_TEST_PATTERNS   14
+#define NUM_TEST_PATTERNS   15
 /*#else
 #define NUM_TEST_PATTERNS   13
 #endif*/

@@ -66,11 +66,8 @@ test_pattern_t test_list[NUM_TEST_PATTERNS] = {
     { true,  PAR,    1,    6,    0, "[Modulo 20, random pattern]            "},
     { true,  ONE,    6,  240,    0, "[Bit fade test, 2 patterns]            "},
     { true,  PAR,    1,   30,    0, "[MMX Mov inversions, random pattern]   "},
-#if TESTWORD_WIDTH > 32
-    { true,  PAR,    1,   30,    0, "[SSE2 Mov inversions, random pattern]  "},
-#else
     { true,  PAR,    1,   30,    0, "[SSE Mov inversions, random pattern]   "},
-#endif
+    { true,  PAR,    1,   30,    0, "[SSE2 Mov inversions, random pattern]  "},
     { true,  PAR,    1,   30,    0, "[AVX Mov inversions, random pattern]   "},
 };
 
@@ -272,6 +269,12 @@ int run_test(int my_cpu, int test, int stage, int iterations)
         }
         BAILOUT;
         break;
+      case 13:
+        if (cpuid_info.flags.sse2) {
+            goto simd;
+        }
+        BAILOUT;
+        break;
 simd:
         if (cpuid_info.flags.rdtsc) {
             prsg_state = get_tsc();
@@ -291,14 +294,12 @@ simd:
             BAILOUT;
         }
         break;
-#if TESTWORD_WIDTH > 32
-      case 13:
+      case 14:
         if (cpuid_info.flags.avx) {
             goto simd;
         }
         BAILOUT;
         break;
-#endif
     }
     return ticks;
 }
